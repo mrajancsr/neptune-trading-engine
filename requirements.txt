@@ -1,0 +1,12 @@
+websocket
+pandas
+numpy
+websocket-client
+aioredis
+websockets
+requests
+uvloop
+prefect
+asyncpg
+ccxt
+git+ssh://github.com/phobos-capital/phobos-db
