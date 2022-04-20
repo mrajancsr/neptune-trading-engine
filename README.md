@@ -1,5 +1,5 @@
 # Ares Exchange Connectivity
-
+  * A repo for streaming live crypto feeds from exchanges
 ### Setup
 * `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
 * `brew install redis` or if on an M1 Mac `arch -arm64 brew install redis`
