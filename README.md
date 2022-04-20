@@ -1,12 +1,12 @@
-# Phobos Exchange Connectivity
+#Ares Exchange Connectivity
 
 ### Setup
 * `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
 * `brew install redis` or if on an M1 Mac `arch -arm64 brew install redis`
 * `brew services restart redis`
 * `pip install -r requirements.txt`
-* ensure the environment variable `PHOBOSTRADINGENGINEPATH` exists and points to where this repo is cloned to
-* ensure the environment variable `PHOBOSSQLCONFIGPATH` exists and points to where the previous command installed `phobos-db`
+* ensure the environment variable `ARESTRADINGENGINEPATH` exists and points to where this repo is cloned to
+* ensure the environment variable `ARESSQLCONFIGPATH` exists and points to where the previous command installed `ares-db`
 
 ### Starting an Exchange Feed
 *`python3 feed_ingestor_to_redis.py -t 'ADA/USD' -n 'kraken-L1'`
