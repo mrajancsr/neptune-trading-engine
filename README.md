@@ -1,4 +1,4 @@
-# Ares Exchange Connectivity
+# Neptune Exchange Connectivity
   * A repo for streaming live crypto feeds from exchanges
 ### Setup
 * `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
