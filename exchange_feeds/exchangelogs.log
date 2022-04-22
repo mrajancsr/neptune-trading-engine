@@ -374,3 +374,10 @@ asyncio.exceptions.CancelledError
 The above exception was the direct cause of the following exception:
 
 websockets.exceptions.ConnectionClosedError: sent 1000 (OK); no close frame received
+INFO:root:entered logger
+INFO:root:Error 61 connecting to localhost:6379. 61.
+INFO:root:Socket Closed: at 2022-04-22 02:17:13.312173;
+            close reason: None,
+                close code: None
+INFO:root:error occured in main body ftx-orderbook-BTC/USD
+INFO:root:entered logger

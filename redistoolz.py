@@ -5,7 +5,7 @@ from typing import Any, Dict, Iterator, List, Optional, Set, TypeVar, Union
 import aioredis
 from aioredis import Redis
 from aioredis.client import Pipeline
-from phobosdb import DBReader
+from neptunedb import DBReader
 
 from exchange_feeds.constants import L2_ENABLED_STREAMS, STREAM_NAMES, RedisActionType
 from limit_order_book.book import LimitOrderBook

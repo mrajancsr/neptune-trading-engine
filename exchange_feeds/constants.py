@@ -4,9 +4,9 @@ from pathlib import Path
 from typing import Dict, List
 
 MAX_RETRIES = 3
-PHOBOSPATH = os.environ["PHOBOSTRADINGENGINEPATH"]
+NEPTUNEPATH = os.environ["NEPTUNETRADINGENGINEPATH"]
 BAR_CUT_DELAY_IN_SECONDS = 60
-EXCHANGEPATH = Path(os.path.join(PHOBOSPATH, "exchange_feeds"))
+EXCHANGEPATH = Path(os.path.join(NEPTUNEPATH, "exchange_feeds"))
 
 VOL_BREAKOUT_SIGNIFICANCE_BARRIER = 2.33
 THIRTY_DAYS_MINUTES = "43200T"
@@ -148,7 +148,7 @@ TIME = "time"
 SYMBOL = "symbol"
 
 # -- PREFECT
-ACCOUNT = "devphoboscapfund"
+ACCOUNT = "neptunecryptofund"
 WORKSPACE_NAME = "live-feed-ingestor"
 FLOW_NAME = "live_feeds_to_redis_pipeline"
 
