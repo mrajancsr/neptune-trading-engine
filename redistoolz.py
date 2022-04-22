@@ -1,3 +1,4 @@
+import datetime
 import os
 from dataclasses import dataclass, field
 from typing import Any, Dict, Iterator, List, Optional, Set, TypeVar, Union
@@ -76,11 +77,9 @@ class RawFeed:
 async def handle_record(
     record: Dict,
     stream_name: str,
-    pipe: Pipeline,
     handle_lob: bool,
-    save: bool = False,
     symbol: Optional[str] = None,
-) -> None:
+) -> Dict[str, Any]:
     """Pushes a single record to redis
 
     Parameters
@@ -121,15 +120,9 @@ async def handle_record(
             new_record["best_bid_timestamp"] = bid.offset
             new_record["best_ask_timestamp"] = ask.offset
 
-        print(new_record)
-        if not save:
-            return
-        await pipe.xadd(stream_name, new_record)
+        return new_record
     else:
-        print(record)
-        if not save:
-            return
-        await pipe.xadd(stream_name, record)
+        return record
 
 
 async def push_raw_feeds_to_redis(
@@ -160,25 +153,35 @@ async def push_raw_feeds_to_redis(
     await obj.send()
 
     while True:
-        records = await obj.receive()
-        if not records:
-            continue
+        try:
+            records = await obj.receive()
+            if not records:
+                continue
 
-        record_count += len(records)
-        for record in records:
-            await handle_record(record, stream_name, pipe, handle_lob, save, symbol)
-        if not save:
-            continue
-        if record_count >= max_record_count:
-            await pipe.execute()
-            # -some exchanges require a pong when they send a ping frame
-            if obj.exchange == "Ftx":
-                await obj.websocket.ping()
-            else:
-                await obj.websocket.pong()
-            print("pushed to redis")
-            record_count = 0
-            continue
+            record_count += len(records)
+            for record in records:
+                record = await handle_record(record, stream_name, handle_lob, symbol)
+                print(record)
+                await pipe.xadd(stream_name, record)
+            if not save:
+                continue
+            if record_count >= max_record_count:
+                await pipe.execute()
+                # -some exchanges require a pong when they send a ping frame
+                if obj.exchange == "Ftx":
+                    await obj.websocket.ping()
+                else:
+                    await obj.websocket.pong()
+                print("pushed to redis")
+                record_count = 0
+                continue
+        except Exception as e:
+            msg = f"""Socket Closed: at {datetime.now()};
+            close reason: {obj.websocket.close_reason},
+                close code: {obj.websocket.close_code}"""
+            obj.logger.info(msg)
+            obj.logger.debug(e)
+            obj.logger.info(f"error occured in main body {stream_name}-{symbol}")
 
 
 async def read_feed_from_redis_once(

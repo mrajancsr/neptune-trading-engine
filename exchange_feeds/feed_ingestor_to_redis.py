@@ -5,10 +5,8 @@
 
 import argparse
 import asyncio
-from datetime import datetime
 
 import uvloop
-from websockets import connect
 
 from binance import BinanceBlotter, BinanceOrderBook
 from constants import STREAM_NAMES, StreamName
@@ -69,32 +67,13 @@ async def stream_from_exchange():
     save = False if save_stream == "no" else True
 
     exchange = factory[stream_name]
-    msg = "entered logger"
-    exchg = exchange(ticker, stream_name)
-    print(
-        f"Connecting to {exchg.exchange}.  If an error occurs please press ctrl + c to stop this forever process"
-    )
-    print("erorrs are logged at exchange_feeds/exchangelogs.log")
-    async for socket in connect(exchg.url, ping_interval=None):
-        try:
-            exchg.logger.info(msg)
-            exchg.websocket = socket
-            await exchg.stream(save=save)
-        except Exception as e:
-            print(e)
-            exchg.logger.info(e)
-            msg = f"""Socket Closed: at {datetime.now()};
-            close reason: {exchg.websocket.close_reason},
-                close code: {exchg.websocket.close_code}"""
-            exchg.logger.info(msg)
-            exchg.logger.info(f"error occured in main body {stream_name}-{ticker}")
-            if exchg.websocket.close_code == 1013:
-                # sleep for 15 minutes
-                await asyncio.sleep(3600)
-            else:
-                await asyncio.sleep(15)
-            await exchg.websocket.close()
-            continue
+
+    async with exchange(ticker, stream_name) as exchg:
+        print(
+            f"Connecting to {exchg.exchange}.  If an error occurs please press ctrl + c to stop this forever process"
+        )
+        print("erorrs are logged at exchange_feeds/exchangelogs.log")
+        await exchg.stream(save=save)
 
 
 if __name__ == "__main__":
