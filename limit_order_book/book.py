@@ -1,8 +1,8 @@
 """Maintains an orderbook"""
 import heapq
-from dataclasses import dataclass, field
 import json
 import math
+from dataclasses import dataclass, field
 from typing import Dict, List
 
 
@@ -79,7 +79,7 @@ class LimitOrderBook:
         for level in message["bids"]:
             bid_price = float(level[0])
             bid_size = float(level[1])
-            if bid_size == 0:
+            if bid_size == 0 and bid_price in self.bids:
                 del self.bids[bid_price]
                 continue
 
@@ -98,7 +98,7 @@ class LimitOrderBook:
         for level in message["asks"]:
             ask_price = float(level[0])
             ask_size = float(level[1])
-            if ask_size == 0:
+            if ask_size == 0 and ask_price in self.asks:
                 del self.asks[ask_price]
                 continue
 

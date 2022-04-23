@@ -1,6 +1,11 @@
-import datetime
+import asyncio
+import multiprocessing as mp
 import os
+from asyncio.events import AbstractEventLoop
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
+from datetime import datetime
+from functools import partial
 from typing import Any, Dict, Iterator, List, Optional, Set, TypeVar, Union
 
 import aioredis
@@ -74,7 +79,7 @@ class RawFeed:
         return list(self.records[0][1].keys())
 
 
-async def handle_record(
+def handle_record(
     record: Dict,
     stream_name: str,
     handle_lob: bool,
@@ -125,6 +130,24 @@ async def handle_record(
         return record
 
 
+async def process_records(
+    records: List[Dict], stream_name: str, handle_lob: bool, symbol: str
+):
+    with ProcessPoolExecutor(initializer=LimitOrderBook()) as process_pool:
+        loop: AbstractEventLoop = asyncio.get_running_loop()
+        calls: List[partial[Dict]] = [
+            partial(handle_record, record, stream_name, handle_lob, symbol)
+            for record in records
+        ]
+        call_coros = []
+        for call in calls:
+            call_coros.append(loop.run_in_executor(process_pool, call))
+
+        results = await asyncio.gather(*call_coros)
+        for record in results:
+            yield record
+
+
 async def push_raw_feeds_to_redis(
     obj: Union[Blotter, Book],
     stream_name: str,
@@ -149,7 +172,6 @@ async def push_raw_feeds_to_redis(
     print("Socket open")
     record_count = 0
     symbol = obj.symbol.replace("-", "").replace("/", "")
-
     await obj.send()
 
     while True:
@@ -159,10 +181,12 @@ async def push_raw_feeds_to_redis(
                 continue
 
             record_count += len(records)
-            for record in records:
-                record = await handle_record(record, stream_name, handle_lob, symbol)
+            async for record in process_records(
+                records, stream_name, handle_lob, symbol
+            ):
                 print(record)
                 await pipe.xadd(stream_name, record)
+
             if not save:
                 continue
             if record_count >= max_record_count:
