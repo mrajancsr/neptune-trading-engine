@@ -1,7 +1,7 @@
 import asyncio
 import os
 from asyncio.events import AbstractEventLoop
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
 from functools import partial
@@ -149,7 +149,7 @@ async def process_records(
     symbol: str,
     book: LimitOrderBook,
 ):
-    with ProcessPoolExecutor() as process_pool:
+    with ThreadPoolExecutor() as thread_pool:
         loop: AbstractEventLoop = asyncio.get_running_loop()
         calls: List[partial[Dict]] = [
             partial(handle_record, record, stream_name, handle_lob, symbol, book)
@@ -157,7 +157,7 @@ async def process_records(
         ]
         call_coros = []
         for call in calls:
-            call_coros.append(loop.run_in_executor(process_pool, call))
+            call_coros.append(loop.run_in_executor(thread_pool, call))
 
         results = await asyncio.gather(*call_coros)
         for record in results:
@@ -188,8 +188,7 @@ async def push_raw_feeds_to_redis(
     print("Socket open")
     record_count = 0
 
-    manager = BookManager()
-    lob = manager.LimitOrderBook()
+    book = LimitOrderBook()
 
     symbol = obj.symbol.replace("-", "").replace("/", "")
     await obj.send()
@@ -202,7 +201,7 @@ async def push_raw_feeds_to_redis(
 
             record_count += len(records)
             async for record in process_records(
-                records, stream_name, handle_lob, symbol, lob
+                records, stream_name, handle_lob, symbol, book
             ):
                 print(record)
                 await pipe.xadd(stream_name, record)
