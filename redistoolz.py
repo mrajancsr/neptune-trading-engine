@@ -1,11 +1,11 @@
 import asyncio
-import multiprocessing as mp
 import os
 from asyncio.events import AbstractEventLoop
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
 from functools import partial
+from multiprocessing.managers import BaseManager
 from typing import Any, Dict, Iterator, List, Optional, Set, TypeVar, Union
 
 import aioredis
@@ -29,29 +29,18 @@ STREAM_FEED: Dict[str, str] = dict.fromkeys(STREAM_NAMES, b"0-0")
 
 MAX_RECORD_COUNT = 2
 
-book = LimitOrderBook()
+
+class OrderBookManager(BaseManager):
+    pass
 
 
-async def connect_to_redis(action: RedisActionType = RedisActionType.READ_ONLY):
-    # covers local execution
-    if not EXECUTE_IN_DOCKER and action == RedisActionType.READ_ONLY:
-        redis = await aioredis.from_url(
-            LOCALHOST, port=REDISPORT, decode_responses=True
-        )
-    elif not EXECUTE_IN_DOCKER and action == RedisActionType.WRITE_ONLY:
-        redis = await aioredis.from_url(LOCALHOST, port=REDISPORT)
+def BookManager():
+    m = OrderBookManager()
+    m.start()
+    return m
 
-    # covers kubernetees/docker execution
-    elif action == RedisActionType.READ_ONLY:
-        redis = await aioredis.from_url(
-            READERHOST, port=REDISPORT, decode_responses=True
-        )
-    elif action == RedisActionType.WRITE_ONLY:
-        redis = await aioredis.from_url(WRITERHOST, port=REDISPORT)
 
-    if await redis.ping():
-        print("connected to Redis!")
-    return redis
+OrderBookManager.register("LimitOrderBook", LimitOrderBook)
 
 
 @dataclass
@@ -79,11 +68,34 @@ class RawFeed:
         return list(self.records[0][1].keys())
 
 
+async def connect_to_redis(action: RedisActionType = RedisActionType.READ_ONLY):
+    # covers local execution
+    if not EXECUTE_IN_DOCKER and action == RedisActionType.READ_ONLY:
+        redis = await aioredis.from_url(
+            LOCALHOST, port=REDISPORT, decode_responses=True
+        )
+    elif not EXECUTE_IN_DOCKER and action == RedisActionType.WRITE_ONLY:
+        redis = await aioredis.from_url(LOCALHOST, port=REDISPORT)
+
+    # covers kubernetees/docker execution
+    elif action == RedisActionType.READ_ONLY:
+        redis = await aioredis.from_url(
+            READERHOST, port=REDISPORT, decode_responses=True
+        )
+    elif action == RedisActionType.WRITE_ONLY:
+        redis = await aioredis.from_url(WRITERHOST, port=REDISPORT)
+
+    if await redis.ping():
+        print("connected to Redis!")
+    return redis
+
+
 def handle_record(
     record: Dict,
     stream_name: str,
     handle_lob: bool,
     symbol: Optional[str] = None,
+    book: LimitOrderBook = None,
 ) -> Dict[str, Any]:
     """Pushes a single record to redis
 
@@ -131,12 +143,16 @@ def handle_record(
 
 
 async def process_records(
-    records: List[Dict], stream_name: str, handle_lob: bool, symbol: str
+    records: List[Dict],
+    stream_name: str,
+    handle_lob: bool,
+    symbol: str,
+    book: LimitOrderBook,
 ):
-    with ProcessPoolExecutor(initializer=LimitOrderBook()) as process_pool:
+    with ProcessPoolExecutor() as process_pool:
         loop: AbstractEventLoop = asyncio.get_running_loop()
         calls: List[partial[Dict]] = [
-            partial(handle_record, record, stream_name, handle_lob, symbol)
+            partial(handle_record, record, stream_name, handle_lob, symbol, book)
             for record in records
         ]
         call_coros = []
@@ -171,6 +187,10 @@ async def push_raw_feeds_to_redis(
     """
     print("Socket open")
     record_count = 0
+
+    manager = BookManager()
+    lob = manager.LimitOrderBook()
+
     symbol = obj.symbol.replace("-", "").replace("/", "")
     await obj.send()
 
@@ -182,7 +202,7 @@ async def push_raw_feeds_to_redis(
 
             record_count += len(records)
             async for record in process_records(
-                records, stream_name, handle_lob, symbol
+                records, stream_name, handle_lob, symbol, lob
             ):
                 print(record)
                 await pipe.xadd(stream_name, record)
