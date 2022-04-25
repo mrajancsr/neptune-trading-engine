@@ -205,9 +205,8 @@ async def push_raw_feeds_to_redis(
                 continue
 
             record_count += len(records)
-            async for record in process_records(
-                records, stream_name, handle_lob, symbol, book
-            ):
+            for record in records:
+                record = handle_record(record, stream_name, handle_lob, symbol, book)
                 print(record)
                 if save:
                     await pipe.xadd(stream_name, record)
