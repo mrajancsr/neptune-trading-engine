@@ -25,8 +25,6 @@ READERHOST: str = os.environ.get("READERHOST", LOCALHOST)
 EXECUTE_IN_DOCKER: Optional[bool] = os.environ.get("EXECUTE_IN_DOCKER")
 REDISPORT: int = int(os.environ.get("REDISPORT", "6379"))
 
-# specifies to read the data in streams from beginning
-STREAM_FEED: Dict[str, str] = dict.fromkeys(STREAM_NAMES, b"0-0")
 
 MAX_RECORD_COUNT = 2
 
@@ -254,7 +252,7 @@ async def read_feed_from_redis_once(
     if not redis:
         redis = await connect_to_redis(action=RedisActionType.READ_ONLY)
     record_count = await redis.xlen(stream_name)
-    if record_count == 0:
+    if not record_count:
         return
     print(f"reading from {stream_name} started")
     feed = RawFeed(stream_name, records=await redis.xrange(stream_name))
