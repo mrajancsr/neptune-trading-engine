@@ -1,7 +1,7 @@
 import asyncio
 import os
 from asyncio.events import AbstractEventLoop
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
 from functools import partial
@@ -9,6 +9,7 @@ from multiprocessing.managers import BaseManager
 from typing import Any, Dict, Iterator, List, Optional, Set, TypeVar, Union
 
 import aioredis
+import websockets
 from aioredis import Redis
 from aioredis.client import Pipeline
 from neptunedb import DBReader
@@ -40,7 +41,8 @@ def BookManager():
     return m
 
 
-OrderBookManager.register("LimitOrderBook", LimitOrderBook)
+# -- uncomment to use multiprocessing base manager
+# OrderBookManager.register("LimitOrderBook", LimitOrderBook)
 
 
 @dataclass
@@ -98,7 +100,6 @@ def handle_record(
     book: LimitOrderBook = None,
 ) -> Dict[str, Any]:
     """Pushes a single record to redis
-
     Parameters
     ----------
     record : Dict
@@ -173,7 +174,6 @@ async def push_raw_feeds_to_redis(
     max_record_count: int = 500,
 ) -> None:
     """Pushes raw feeds received from exchange to redis
-
     Parameters
     ----------
     obj : Exchange
@@ -194,6 +194,13 @@ async def push_raw_feeds_to_redis(
     await obj.send()
 
     while True:
+        if not obj.websocket.open:
+            try:
+                print("Websocket is NOT connected.  ")
+                obj.websocket = await websockets.connect(obj.uri)
+                await obj.send()
+            except Exception:
+                print("Unable to reconnect, trying again...")
         try:
             records = await obj.receive()
             if not records:
@@ -204,7 +211,8 @@ async def push_raw_feeds_to_redis(
                 records, stream_name, handle_lob, symbol, book
             ):
                 print(record)
-                await pipe.xadd(stream_name, record)
+                if save:
+                    await pipe.xadd(stream_name, record)
 
             if not save:
                 continue
@@ -225,20 +233,19 @@ async def push_raw_feeds_to_redis(
             obj.logger.info(msg)
             obj.logger.debug(e)
             obj.logger.info(f"error occured in main body {stream_name}-{symbol}")
+            continue
 
 
 async def read_feed_from_redis_once(
     stream_name: str, redis: Optional[Redis] = None
 ) -> Optional[RawFeed]:
     """Reads a single feed from redis
-
     Parameters
     ----------
     stream_name : str
         the exchange stream name
     redis : Optional[Redis], default=None
         connection from localhost,
-
     Returns
     -------
     Optional[RawFeed]
@@ -259,14 +266,12 @@ async def read_live_feeds_from_redis(
     stream_name: str, redis: Optional[Redis] = None
 ) -> Optional[RawFeed]:
     """_summary_
-
     Parameters
     ----------
     stream_name : str
         _description_
     redis : Optional[Redis], optional
         _description_, by default None
-
     Returns
     -------
     Optional[RawFeed]
@@ -296,7 +301,6 @@ async def push_feed_to_postgres(feed: RawFeed) -> None:
 
 def recursivels(phobos_path: str, files: list, exclusions: Set[str]) -> None:
     """Recursively get all files names in phobos path
-
     Parameters
     ----------
     phobos_path : str
