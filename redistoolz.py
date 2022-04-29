@@ -163,6 +163,8 @@ async def process_records(
             yield record
 
 
+
+
 async def push_raw_feeds_to_redis(
     obj: Union[Blotter, Book],
     stream_name: str,
