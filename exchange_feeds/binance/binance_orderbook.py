@@ -14,8 +14,8 @@ from exchange_feeds.constants import (
     EXCHANGEPATH,
     Exchange,
 )
-from websockets.client import WebSocketClientProtocol
 from exchange_feeds.websocket import EchoWebSocket
+from websockets.client import WebSocketClientProtocol
 
 # event policy needs to be set at top of file
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
