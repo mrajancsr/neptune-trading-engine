@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
 from functools import partial
+from json import loads
 from multiprocessing.managers import BaseManager
 from typing import Any, Dict, Iterator, List, Optional, Set, TypeVar, Union
 
@@ -20,9 +21,15 @@ from limit_order_book.book import LimitOrderBook
 Blotter = TypeVar("Blotter")
 Book = TypeVar("Book")
 LOCALHOST: str = "redis://localhost"
+DOCKERHOST: str = "redis://myredis"
 WRITERHOST: str = os.environ.get("WRITERHOST", LOCALHOST)
 READERHOST: str = os.environ.get("READERHOST", LOCALHOST)
-EXECUTE_IN_DOCKER: Optional[bool] = os.environ.get("EXECUTE_IN_DOCKER")
+EXECUTE_IN_DOCKER: Optional[bool] = loads(
+    os.environ.get("EXECUTE_IN_DOCKER", "False").lower()
+)
+EXECUTE_LOCALLY: Optional[bool] = loads(
+    os.environ.get("EXECUTE_LOCALLY", "False").lower()
+)
 REDISPORT: int = int(os.environ.get("REDISPORT", "6379"))
 
 
@@ -70,14 +77,22 @@ class RawFeed:
 
 async def connect_to_redis(action: RedisActionType = RedisActionType.READ_ONLY):
     # covers local execution
-    if not EXECUTE_IN_DOCKER and action == RedisActionType.READ_ONLY:
+    if EXECUTE_LOCALLY and action == RedisActionType.READ_ONLY:
         redis = await aioredis.from_url(
             LOCALHOST, port=REDISPORT, decode_responses=True
         )
-    elif not EXECUTE_IN_DOCKER and action == RedisActionType.WRITE_ONLY:
+    elif EXECUTE_LOCALLY and action == RedisActionType.WRITE_ONLY:
         redis = await aioredis.from_url(LOCALHOST, port=REDISPORT)
 
-    # covers kubernetees/docker execution
+    # covers docker execution only for testing purposses
+    elif EXECUTE_IN_DOCKER and action == RedisActionType.READ_ONLY:
+        redis = await aioredis.from_url(
+            DOCKERHOST, port=REDISPORT, decode_responses=True
+        )
+    elif EXECUTE_IN_DOCKER and action == RedisActionType.WRITE_ONLY:
+        redis = await aioredis.from_url(DOCKERHOST, port=REDISPORT)
+
+    # covers kubernetees
     elif action == RedisActionType.READ_ONLY:
         redis = await aioredis.from_url(
             READERHOST, port=REDISPORT, decode_responses=True
@@ -163,14 +178,12 @@ async def process_records(
             yield record
 
 
-
-
 async def push_raw_feeds_to_redis(
     obj: Union[Blotter, Book],
     stream_name: str,
     pipe: Pipeline,
     handle_lob: bool = False,
-    save: bool = False,
+    save_stream: bool = False,
     max_record_count: int = 500,
 ) -> None:
     """Pushes raw feeds received from exchange to redis
@@ -210,12 +223,12 @@ async def push_raw_feeds_to_redis(
             for record in records:
                 record = handle_record(record, stream_name, handle_lob, symbol, book)
                 print(record)
-                if save:
+                if save_stream:
                     await pipe.xadd(stream_name, record)
-
-            if not save:
+            if not save_stream:
                 continue
             if record_count >= max_record_count:
+                print("entered here")
                 await pipe.execute()
                 # -some exchanges require a pong when they send a ping frame
                 if obj.exchange == "Ftx":
