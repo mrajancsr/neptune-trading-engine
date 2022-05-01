@@ -64,16 +64,13 @@ async def stream_from_exchange():
     if stream_name not in factory:
         raise KeyError("stream name not found")
 
-    save = False if save_stream == "no" else True
-
     exchange = factory[stream_name]
-
     async with exchange(ticker, stream_name) as exchg:
         print(
             f"Connecting to {exchg.exchange}.  If an error occurs please press ctrl + c to stop this forever process"
         )
         print("erorrs are logged at exchange_feeds/exchangelogs.log")
-        await exchg.stream(save=save)
+        await exchg.stream(save_stream=save_stream)
 
 
 if __name__ == "__main__":

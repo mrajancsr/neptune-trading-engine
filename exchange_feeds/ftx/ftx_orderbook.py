@@ -85,5 +85,7 @@ class FTXOrderBook(EchoWebSocket):
         await self.websocket.send(dumps(FTX_SUBSCRIPTION_PAYLOAD))
         print("Socket open!")
 
-    async def stream(self, save: bool = False) -> None:
-        await super().stream(handle_lob=True, save=save, max_record_count=20)
+    async def stream(self, save_stream: bool = False) -> None:
+        await super().stream(
+            handle_lob=True, save_stream=save_stream, max_record_count=20
+        )

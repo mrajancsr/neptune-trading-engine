@@ -92,5 +92,5 @@ class KrakenOrderBook(EchoWebSocket):
         await self.websocket.send(dumps(KRAKEN_SUBSCRIPTION_PAYLOAD))
         print(f"Subscribed to {self.exchange} book channel successfully")
 
-    async def stream(self, save: bool = False) -> None:
-        await super().stream(handle_lob=True, save=save)
+    async def stream(self, save_stream: bool = False) -> None:
+        await super().stream(handle_lob=True, save_stream=save_stream)

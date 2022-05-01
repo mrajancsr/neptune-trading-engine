@@ -98,8 +98,10 @@ class KrakenBlotter(EchoWebSocket):
         await self.websocket.send(dumps(KRAKEN_SUBSCRIPTION_PAYLOAD))
         print(f"Subscribed to {self.exchange} trade channel successfully")
 
-    async def stream(self, save: bool = False) -> None:
-        await super().stream(handle_lob=False, save=save, max_record_count=10)
+    async def stream(self, save_stream: bool = False) -> None:
+        await super().stream(
+            handle_lob=False, save_stream=save_stream, max_record_count=10
+        )
 
     def cut_bar(self, f_stop=False):
         if len(self._dataframe) > 0:

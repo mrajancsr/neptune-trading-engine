@@ -28,7 +28,10 @@ class EchoWebSocket(metaclass=ABCMeta):
         pass
 
     async def stream(
-        self, handle_lob: bool = False, save: bool = False, max_record_count: int = 500
+        self,
+        handle_lob: bool = False,
+        save_stream: bool = False,
+        max_record_count: int = 500,
     ) -> None:
         print("Entered Streamer")
 
@@ -37,5 +40,5 @@ class EchoWebSocket(metaclass=ABCMeta):
         # ensures indefinite connection to exchange
         async with redis.pipeline() as pipe:
             await push_raw_feeds_to_redis(
-                self, self.stream_name, pipe, handle_lob, save, max_record_count
+                self, self.stream_name, pipe, handle_lob, save_stream, max_record_count
             )
