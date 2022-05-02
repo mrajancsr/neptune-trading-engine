@@ -6,4 +6,4 @@ docker_deployments/
 *.pem
 *.pyc
 *.cpython
-limit_order_book/__pycache__/book.cpython-39.pyc
+toms_trash_code

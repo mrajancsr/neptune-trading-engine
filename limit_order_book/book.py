@@ -1,4 +1,4 @@
-"""Maintains an orderbook"""
+"""The purpose of this module is to extract order book prices from exchanges at various depth"""
 import heapq
 import json
 import math
