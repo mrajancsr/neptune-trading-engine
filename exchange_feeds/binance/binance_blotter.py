@@ -14,7 +14,7 @@ from exchange_feeds.constants import (
     EXCHANGEPATH,
     Exchange,
 )
-from exchange_feeds.websocket import EchoWebSocket
+from exchange_feeds.socketmanager import EchoWebSocket
 from websockets.client import WebSocketClientProtocol
 
 # event policy needs to be set at top of file
@@ -29,12 +29,11 @@ logger: logging.Logger = logging.getLogger()
 # -- Note: At the moment, the file stops running once an error is caught
 
 
-@dataclass(eq=False)
+@dataclass
 class BinanceBlotter(EchoWebSocket):
     symbol: str
     stream_name: str
     url: str = field(init=False)
-    websocket: Optional[WebSocketClientProtocol] = None
     logger: logging.Logger = field(init=False)
     exchange: str = field(init=False)
 
@@ -45,22 +44,26 @@ class BinanceBlotter(EchoWebSocket):
         super().__init__(self.url, self.stream_name)
 
     async def receive(self) -> Optional[List[Dict]]:
-        message = loads(await self.websocket.recv())
-        if "result" in message:
-            return None
-        return [
-            {
-                new_key: message[old_key]
-                for (new_key, old_key) in BINANCE_BLOTTER_MAPPING.items()
-            }
-        ]
+        message = await self.recv()
+        yield message
 
     async def send(self) -> None:
         BINANCE_SUBSCRIPTION_PAYLOAD["params"] = [
             f"{self.symbol}{BINANCE_TRADE_BLOTTER}"
         ]
         await self.websocket.send(dumps(BINANCE_SUBSCRIPTION_PAYLOAD))
-        print("Socket open!")
+        print(f"Subscribed to {self.exchange} Exchange!")
 
     async def stream(self, save: bool = False) -> None:
-        await super().stream(handle_lob=False, save=save)
+        while True:
+            async for record in self.receive():
+                print(record)
+
+
+async def main():
+    async with BinanceBlotter("btcusdt", "binance-blotter") as bl:
+        await bl.stream()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
