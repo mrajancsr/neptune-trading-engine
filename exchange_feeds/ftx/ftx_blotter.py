@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from json import dumps, loads
 from typing import Dict, List, Optional
 
-import Momentum
 import pandas as pd
 import uvloop
 from exchange_feeds.constants import (

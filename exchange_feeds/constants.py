@@ -68,6 +68,7 @@ DYDX_BLOTTER_MAPPING: Dict[str, str] = {
 }
 
 
+
 @unique
 class StreamName(Enum):
     BINANCE_BLOTTER = "binance-blotter"

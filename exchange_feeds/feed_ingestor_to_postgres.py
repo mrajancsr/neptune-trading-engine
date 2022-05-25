@@ -42,7 +42,13 @@ async def live_feed_ingestor() -> None:
     reader = await connect_to_redis()
     writer = await connect_to_redis(RedisActionType.WRITE_ONLY)
     tasks = [
-        asyncio.create_task(push_feed_from_redis_to_postgres(stream, reader, writer))
+        asyncio.create_task(
+            push_feed_from_redis_to_postgres(
+                stream,
+                reader,
+                writer,
+            )
+        )
         for stream in STREAM_NAMES
     ]
     await asyncio.gather(*tasks)
