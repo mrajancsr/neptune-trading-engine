@@ -13,8 +13,7 @@ from exchange_feeds.constants import (
     FTXUS_BASE_WS,
     Exchange,
 )
-from exchange_feeds.websocket import EchoWebSocket
-from websockets.client import WebSocketClientProtocol
+from exchange_feeds.socketmanager import EchoWebSocket
 
 # -- Notes
 # -- FTX Exchange requires a Subscription payload,
@@ -34,7 +33,6 @@ class FTXOrderBook(EchoWebSocket):
     symbol: str
     stream_name: str
     url: str = field(init=False)
-    websocket: Optional[WebSocketClientProtocol] = None
     logger: logging.Logger = field(init=False)
     exchange: str = field(init=False)
 

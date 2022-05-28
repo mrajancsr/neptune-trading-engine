@@ -1,4 +1,4 @@
-"""The purpose of this file is to clean the redis data streams in memory every
+../../exchange_feeds/binance/binance_orderbook.py"""The purpose of this file is to clean the redis data streams in memory every
 15 minutes and then push the cleaned data to a historical database
 """
 import asyncio
