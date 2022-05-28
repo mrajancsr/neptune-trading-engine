@@ -45,3 +45,12 @@ class BinanceBlotter(EchoWebSocket):
         ]
         await self.websocket.send(dumps(BINANCE_SUBSCRIPTION_PAYLOAD))
         print(f"Subscribed to {self.exchange} Exchange!")
+
+
+async def main():
+    async with BinanceBlotter("btcusdt", "binance-blotter") as bl:
+        await bl.stream()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
