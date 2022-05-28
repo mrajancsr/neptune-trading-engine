@@ -23,7 +23,7 @@ asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 class KrakenOrderBook(EchoWebSocket):
     symbol: str
     stream_name: str
-    depth: int
+    depth: int = 10
     url: str = field(init=False)
     exchange: str = field(init=False)
 
@@ -36,16 +36,18 @@ class KrakenOrderBook(EchoWebSocket):
     def handle_traded_message(self, message: Dict[str, List[List[str]]]):
         if "as" in message and "bs" in message:
             return dict(asks=message["as"], bids=message["bs"])
-        elif "a" in message or "b" in message:
-            pass
+        elif "a" in message:
+            return dict(asks=message["a"])
+        elif "b" in message:
+            return dict(bids=message["b"])
 
     async def receive(self) -> Optional[Iterator[Dict]]:
         message = await self.recv()
         if not isinstance(message, list):
-            return {}
+            yield {}
         else:
             payload = message[1]
-            return self.handle_trade_message(payload)
+            yield self.handle_traded_message(payload)
 
     async def send(self) -> None:
         KRAKEN_SUBSCRIPTION_PAYLOAD["pair"] = [self.symbol]
@@ -53,13 +55,3 @@ class KrakenOrderBook(EchoWebSocket):
         KRAKEN_SUBSCRIPTION_PAYLOAD["subscription"]["depth"] = self.depth
         await self.websocket.send(dumps(KRAKEN_SUBSCRIPTION_PAYLOAD))
         print(f"Subscribed to {self.exchange} book channel successfully")
-
-
-async def main():
-    async with KrakenOrderBook("BTC/USD", "kraken-orderbook", 30) as book:
-        while True:
-            print(await book.recv())
-
-
-if __name__ == "__main__":
-    asyncio.run(main(), debug=True)

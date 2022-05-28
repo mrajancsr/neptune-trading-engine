@@ -9,22 +9,17 @@ import asyncio
 import uvloop
 
 from binance import BinanceBlotter, BinanceOrderBook
-from constants import STREAM_NAMES, StreamName
-from ftx import FTXBlotter, FTXOrderBook
+from constants import STREAM_NAMES
 from kraken import KrakenBlotter, KrakenOrderBook
 
 # event policy needs to be set at top of file
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 factory = {}
-factory[StreamName.BINANCE_BLOTTER.value] = BinanceBlotter
-factory[StreamName.BINANCE_L1.value] = BinanceOrderBook
-factory[StreamName.FTX_BLOTTER.value] = FTXBlotter
-factory[StreamName.FTX_ORDERBOOK.value] = FTXOrderBook
-factory[StreamName.KRAKEN_BLOTTER.value] = KrakenBlotter
-factory[StreamName.KRAKEN_ORDERBOOK.value] = KrakenOrderBook
-factory[StreamName.FTXUS_BLOTTER.value] = FTXBlotter
-factory[StreamName.FTXUS_ORDERBOOK.value] = FTXOrderBook
+factory["binance-blotter"] = BinanceBlotter
+factory["kraken-orderbook"] = KrakenOrderBook
+factory["kraken-blotter"] = KrakenBlotter
+factory["binance-L1"] = BinanceOrderBook
 
 
 async def stream_from_exchange():
