@@ -1,21 +1,15 @@
-import asyncio
+import math
 import os
-from asyncio.events import AbstractEventLoop
-from concurrent.futures import ThreadPoolExecutor
+import socket
 from dataclasses import dataclass, field
-from datetime import datetime
-from functools import partial
 from json import loads
-from multiprocessing.managers import BaseManager
-from typing import Any, Dict, Iterator, List, Optional, Set, TypeVar, Union
+from typing import Any, Dict, Iterator, List, Optional, Set, TypeVar
 
 import aioredis
-import websockets
 from aioredis import Redis
-from aioredis.client import Pipeline
+from influx_line_protocol import Metric
 
 from exchange_feeds.constants import L2_ENABLED_STREAMS, STREAM_NAMES, RedisActionType
-from limit_order_book.book import LimitOrderBook
 
 Blotter = TypeVar("Blotter")
 Book = TypeVar("Book")
@@ -30,23 +24,8 @@ EXECUTE_LOCALLY: Optional[bool] = loads(
     os.environ.get("EXECUTE_LOCALLY", "False").lower()
 )
 REDISPORT: int = int(os.environ.get("REDISPORT", "6379"))
-
-
-MAX_RECORD_COUNT = 2
-
-
-class OrderBookManager(BaseManager):
-    pass
-
-
-def BookManager():
-    m = OrderBookManager()
-    m.start()
-    return m
-
-
-# -- uncomment to use multiprocessing base manager
-# OrderBookManager.register("LimitOrderBook", LimitOrderBook)
+AWSHOST: str = "18.207.241.164"
+INFLUXPORT: int = 9009
 
 
 @dataclass
@@ -74,7 +53,9 @@ class Feed:
         return list(self.records[0][1].keys())
 
 
-async def connect_to_redis(action: RedisActionType = RedisActionType.READ_ONLY):
+async def connect_to_redis(
+    action: RedisActionType = RedisActionType.READ_ONLY,
+):
     # covers local execution
     if EXECUTE_LOCALLY and action == RedisActionType.READ_ONLY:
         redis = await aioredis.from_url(
@@ -104,28 +85,6 @@ async def connect_to_redis(action: RedisActionType = RedisActionType.READ_ONLY):
     return redis
 
 
-async def process_records(
-    records: List[Dict],
-    stream_name: str,
-    handle_lob: bool,
-    symbol: str,
-    book: LimitOrderBook,
-):
-    with ThreadPoolExecutor() as thread_pool:
-        loop: AbstractEventLoop = asyncio.get_running_loop()
-        calls: List[partial[Dict]] = [
-            partial(handle_record, record, stream_name, handle_lob, symbol, book)
-            for record in records
-        ]
-        call_coros = []
-        for call in calls:
-            call_coros.append(loop.run_in_executor(thread_pool, call))
-
-        results = await asyncio.gather(*call_coros)
-        for record in results:
-            yield record
-
-
 async def read_feed_from_redis(
     stream_name: str, redis: Optional[Redis] = None
 ) -> Optional[Feed]:
@@ -147,25 +106,61 @@ async def read_feed_from_redis(
     if not record_count:
         return None
     print(f"reading from {stream_name} started")
-
     records = await redis.xrange(stream_name)
+    print(f"total records loaded {len(records)}")
 
     return Feed(stream_name, records)
 
 
-async def push_feed_to_postgres(feed: Feed) -> None:
-    # db = DBReader()
-    if feed.record_count() == 0:
-        print(f"feed {feed.stream_name} is empty, nothing to push")
-        return
-    table_name = feed.stream_name.replace("-", "_")
-    column_names = feed.column_names
-    if column_names:
-        print(f"pushing data from {feed.stream_name} to {table_name}")
-        db.push(feed.get_records(), table_name, column_names)
-        print(f"push to {table_name} successfull")
-    else:
-        print(f"failed to push to {table_name} due to incorrect column names")
+def metric_type_setter(
+    table_name: str, stream_name: str, records: List[Dict[str, Any]]
+) -> str:
+    metric = Metric(table_name)
+    str_metric = ""
+    metrics = ""
+    if stream_name == "binance-L1":
+        for record in records:
+            metric.add_tag("symbol", record[1]["symbol"])
+            metric.add_value("bid", float(record[1]["bid"]))
+            metric.add_value("bid_size", float(record[1]["bid_size"]))
+            metric.add_value("ask", float(record[1]["ask"]))
+            metric.add_value("ask_size", float(record[1]["ask_size"]))
+            metric.add_value("trxn_time", int(record[1]["trxn_time"]))
+            str_metric = str(metric)
+            str_metric += "\n"
+            metrics += str_metric
+    elif stream_name == "binance-blotter":
+        for record in records:
+            metric.add_value("E", int(record[1]["E"]))
+            metric.add_value("a", int(record[1]["a"]))
+            metric.add_tag("symbol", record[1]["s"])
+            metric.add_value("p", float(record[1]["p"]))
+            metric.add_value("q", float(record[1]["q"]))
+            metric.add_value("f", int(record[1]["f"]))
+            metric.add_value("l", int(record[1]["l"]))
+            metric.add_value("T", int(record[1]["T"]))
+            str_metric = str(metric)
+            str_metric += "\n"
+            metrics += str_metric
+    return metrics
+
+
+def batch_records(records: List[Any], batch_size: int) -> List[List[Any]]:
+    num_batches: int = math.ceil(len(records) / batch_size)
+
+    result = []
+    for i in range(num_batches):
+        result.append(records[i * batch_size : (i + 1) * batch_size])
+    yield from result
+
+
+def push_feed_to_questdb(table_name: str, stream_name: str, records) -> None:
+    metrics: str = metric_type_setter(table_name, stream_name, records)
+    bytes_metric = bytes(metrics, "utf-8")
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((AWSHOST, INFLUXPORT))
+    s.sendall(bytes_metric)
+    s.close()
 
 
 def recursivels(
@@ -173,7 +168,7 @@ def recursivels(
     files: List[str],
     exclusions: Set[str],
 ) -> None:
-    """Recursively get all files names in phobos path
+    """Recursively get all files names in parent path
     Parameters
     ----------
     parent_path : str
