@@ -6,7 +6,6 @@
 * `brew services restart redis`
 * `pip install -r requirements.txt`
 * ensure the environment variable `NEPTUNETRADINGENGINEPATH` exists and points to where this repo is cloned to
-* ensure the environment variable `NEPTUNESQLCONFIGPATH` exists and points to where the previous command installed `neptune-db`
 
 ### Starting an Exchange Feed
 *`python3 feed_ingestor_to_redis.py -t 'ADA/USD' -n 'kraken-L1'`
