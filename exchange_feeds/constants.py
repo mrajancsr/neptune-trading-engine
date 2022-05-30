@@ -136,11 +136,6 @@ class Exchange(Enum):
     KRAKEN = "Kraken"
 
 
-class RedisActionType(Enum):
-    WRITE_ONLY = "writeonly"
-    READ_ONLY = "readonly"
-
-
 OPEN = "open"
 HIGH = "high"
 LOW = "low"
