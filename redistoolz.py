@@ -3,7 +3,7 @@ import os
 import socket
 from dataclasses import dataclass, field
 from json import loads
-from typing import Any, Dict, Iterator, List, Optional, Set, TypeVar
+from typing import Any, Dict, Iterator, List, Optional, TypeVar
 
 import aioredis
 from aioredis import Redis
@@ -161,31 +161,3 @@ def push_feed_to_questdb(table_name: str, stream_name: str, records) -> None:
     s.connect((AWSHOST, INFLUXPORT))
     s.sendall(bytes_metric)
     s.close()
-
-
-def recursivels(
-    parent_path: str,
-    files: List[str],
-    exclusions: Set[str],
-) -> None:
-    """Recursively get all files names in parent path
-    Parameters
-    ----------
-    parent_path : str
-        parent directory where folders are located
-    files : list
-        stores the files names in list
-    """
-    if os.path.isfile(parent_path) and parent_path not in exclusions:
-        files.append(parent_path)
-    elif os.path.isdir(parent_path) and not parent_path.startswith("."):
-        for entry in os.listdir(parent_path):
-            if (
-                entry.startswith("__")
-                or entry.startswith(".")
-                or entry.endswith(".ipynb")
-                or entry in exclusions
-            ):
-                continue
-            subdir = os.path.join(parent_path, entry)
-            recursivels(subdir, files, exclusions)
