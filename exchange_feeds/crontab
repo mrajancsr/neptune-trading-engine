@@ -1,2 +1,0 @@
-5 * * * * python 
-/Users/rajmani/Documents/research/Home/python/phobos-trading-engine/exchange_feeds/feed_ingestor_to_postgres.py

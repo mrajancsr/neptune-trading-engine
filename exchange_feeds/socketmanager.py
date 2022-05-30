@@ -9,11 +9,11 @@ from random import random
 from socket import gaierror
 from typing import Any, Dict, Optional
 
-from redistoolz import connect_to_redis
 from websockets import WebSocketClientProtocol, connect, protocol
 from websockets.exceptions import ConnectionClosedError
 
-from exchange_feeds.constants import EXCHANGEPATH, RedisActionType
+from constants import EXCHANGEPATH
+from redistoolz import RedisActionType, connect_to_redis
 
 path_to_log_file = os.path.join(EXCHANGEPATH, "exchangelogs.log")
 
