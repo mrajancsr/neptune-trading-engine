@@ -7,3 +7,8 @@ docker_deployments/
 *.pyc
 *.cpython
 toms_trash_code
+secrets
+streaming-dashboard
+test-elasticache-connection
+lambda-containers
+py39
