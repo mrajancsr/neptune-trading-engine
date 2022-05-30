@@ -1,10 +1,6 @@
-pandas
-numpy
-websocket-client
 aioredis
 websockets
 requests
 uvloop
-prefect
 asyncpg
 
