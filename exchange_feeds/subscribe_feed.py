@@ -22,9 +22,9 @@ factory["kraken-blotter"] = KrakenBlotter
 factory["binance-L1"] = BinanceOrderBook
 
 
-async def stream_from_exchange():
+async def subscribe_to_exchange():
     parser = argparse.ArgumentParser(
-        prog="feed_ingestor_to_redis",
+        prog="subscribe_feed",
         usage="%(prog)s --symbol [options] --stream_name [options]",
         description="Streams Raw Feeds from Exchange",
         epilog="sit back and drink coffee - long running program",
@@ -69,4 +69,4 @@ async def stream_from_exchange():
 
 
 if __name__ == "__main__":
-    asyncio.run(stream_from_exchange())
+    asyncio.run(subscribe_to_exchange())

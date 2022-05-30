@@ -1,6 +1,5 @@
-aioredis
 websockets
-requests
 uvloop
-asyncpg
+influx-line-protocol
+aioredis==2.0.1
 

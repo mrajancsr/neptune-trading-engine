@@ -1,0 +1,57 @@
+# this file contains deployment configuration for kraken btcusd orderbook
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: binance-btcusdt-blotter
+  labels:
+    app: btcusdt
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: btcusdt
+  template:
+    metadata:
+      labels:
+        app: btcusdt
+    spec:
+      containers:
+        - name: binance-btcusdt-blotter-container
+          image: 955157183814.dkr.ecr.us-east-1.amazonaws.com/exchange_streamer
+          env:
+            - name: WRITERHOST
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: WRITERHOST
+            - name: READERHOST
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: READERHOST
+            - name: SYMBOL
+              value: "btcusdt"
+            - name: STREAM_NAME
+              value: "binance-blotter"
+            - name: REDISPORT
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: REDISPORT
+
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 6379
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: binance-btcusdt-blotter-service
+spec:
+  selector:
+    app: btcusdt
+  ports:
+    - protocol: TCP
+      port: 6379
+      targetPort: 6379
