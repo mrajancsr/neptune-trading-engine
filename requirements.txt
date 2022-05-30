@@ -1,4 +1,3 @@
-websocket
 pandas
 numpy
 websocket-client
@@ -8,5 +7,4 @@ requests
 uvloop
 prefect
 asyncpg
-ccxt
-git+ssh://github.com/phobos-capital/phobos-db
+
