@@ -1,14 +1,10 @@
 
 .vscode
 __pycache__/
-docker_deployments/
 .DS_Store
 *.pem
 *.pyc
 *.cpython
-toms_trash_code
 secrets
-streaming-dashboard
-test-elasticache-connection
-lambda-containers
 py39
+test.*

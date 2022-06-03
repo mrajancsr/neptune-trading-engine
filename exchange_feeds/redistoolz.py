@@ -1,14 +1,9 @@
-import math
 import os
-import socket
-from dataclasses import dataclass, field
 from enum import Enum
 from json import loads
-from typing import Any, Dict, Iterator, List, Optional, TypeVar
+from typing import Optional, TypeVar
 
 import aioredis
-from aioredis import Redis
-from influx_line_protocol import Metric
 
 Blotter = TypeVar("Blotter")
 Book = TypeVar("Book")
