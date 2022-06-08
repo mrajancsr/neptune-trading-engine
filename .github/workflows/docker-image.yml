@@ -36,4 +36,5 @@ jobs:
           ECR_REPOSITORY: exchange_streamer
           IMAGE_TAG: latest
         run: |
-          docker buildx build --platform=linux/amd64 --no-cache . --file Dockerfile --tag exchange_streamer:$(date +%s)
+          docker buildx build --platform=linux/amd64 --no-cache --file Dockerfile --tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
