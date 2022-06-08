@@ -1,0 +1,27 @@
+{
+    "autoDocstring.docstringFormat": "numpy",
+    "python.linting.flake8Enabled": true,
+    "python.languageServer": "Pylance",
+    "python.linting.enabled": true,
+    "python.formatting.provider": "black",
+    "editor.formatOnSave": true,
+    "editor.codeLens": true,
+    "python.analysis.autoImportCompletions": true,
+    "code-runner.executorMap": {
+        "python": "$pythonPath -u $fullFileName"
+    },
+    "code-runner.clearPreviousOutput": true,
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": true,
+    },
+    "git.ignoreLimitWarning": true,
+    "jupyter.jupyterServerType": "local",
+    "terminal.integrated.env.osx": {
+        "PYTHONPATH": "${workspaceFolder}"
+    },
+    "jupyter.notebookFileRoot": "${workspaceFolder}",
+    "python.analysis.extraPaths": [
+        "./exchange_feeds"
+    ],
+    
+}
