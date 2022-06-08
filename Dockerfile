@@ -19,4 +19,4 @@ RUN pip install -r requirements.txt
 ENV NEPTUNETRADINGENGINEPATH=/neptune-trading-engine
 ENV PYTHONPATH ${NEPTUNETRADINGENGINEPATH}
 
-#CMD ["sh","-c", "python3 exchange_feeds/subscribe_feed.py -t $SYMBOL -n $STREAM_NAME"]
+CMD ["sh","-c", "python3 exchange_feeds/subscribe_feed.py -t $SYMBOL -n $STREAM_NAME"]
