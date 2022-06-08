@@ -1,9 +1,7 @@
 # --- The purpose of this file is to maintain orderbook feed in real time
 # --- in order to interpret the webscocket order book feed
 # --- Currently, only supports kraken exchange
-import heapq
-import json
-import math
+
 from dataclasses import dataclass, field
 from typing import Dict, List
 
