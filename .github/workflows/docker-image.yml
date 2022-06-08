@@ -2,17 +2,20 @@ name: Docker Image CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Build the Docker image
-      run: docker buildx build --platform=linux/amd64 --no-cache . --file Dockerfile --tag exchange_streamer:$(date +%s)
+      - uses: actions/checkout@v3
+      - name: Build the Docker image
+        run: docker buildx build --platform=linux/amd64 --no-cache . --file Dockerfile --tag exchange_streamer:$(date +%s)
+      - name: List with flake8
+        run: |
+          pip install flake8
+          flake8 .
+        continue-on-error: true
