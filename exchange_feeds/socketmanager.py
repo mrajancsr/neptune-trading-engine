@@ -9,11 +9,12 @@ from random import random
 from socket import gaierror
 from typing import Any, Dict, Optional
 
+from aiokafka import AIOKafkaProducer
 from websockets import WebSocketClientProtocol, connect, protocol
 from websockets.exceptions import ConnectionClosedError
 
-from constants import EXCHANGEPATH
-from redistoolz import RedisActionType, connect_to_redis
+from exchange_feeds.constants import EXCHANGEPATH
+from exchange_feeds.xchgtoolz import serializer
 
 path_to_log_file = os.path.join(EXCHANGEPATH, "exchangelogs.log")
 
@@ -58,9 +59,7 @@ class EchoWebSocket(metaclass=ABCMeta):
         return self
 
     async def connect(self):
-        msg = (
-            f"connected to exchange: {self.exchange} for streamname {self.stream_name}"
-        )
+        msg = f"connected to exchange: {self.exchange} for streamname {self.stream_name}"  # noqa: E501
         self.ws_state = WSListenerState.STREAMING
         self._conn = connect(self.url, ping_interval=None)
         try:
@@ -105,7 +104,10 @@ class EchoWebSocket(metaclass=ABCMeta):
                     if self.ws_state == WSListenerState.RECONNECTING:
                         await self._run_reconnect()
 
-                    if not self.websocket or self.ws_state != WSListenerState.STREAMING:
+                    if (
+                        not self.websocket
+                        or self.ws_state != WSListenerState.STREAMING  # noqa: E501
+                    ):
                         await self._wait_for_reconnect()
                         break
                     elif self.ws_state == WSListenerState.EXITING:
@@ -125,12 +127,12 @@ class EchoWebSocket(metaclass=ABCMeta):
                                 await self._queue.put(res)
                             else:
                                 self._log.debug(
-                                    f"Queue overflow {self.MAX_QUEUE_SIZE}. Message not filled"
+                                    f"Queue overflow {self.MAX_QUEUE_SIZE}. Message not filled"  # noqa: E501
                                 )
                                 await self._queue.put(
                                     {
                                         "e": "error",
-                                        "m": "Queue overflow. Message not filled",
+                                        "m": "Queue overflow. Message not filled",  # noqa: E501
                                     }
                                 )
                                 raise WebSocketUnableToConnect
@@ -173,16 +175,20 @@ class EchoWebSocket(metaclass=ABCMeta):
         if self._reconnects < self.MAX_RECONNECTS:
             reconnect_wait = self._get_reconnect_wait(self._reconnects)
             self._log.debug(
-                f"websocket reconnecting. {self.MAX_RECONNECTS - self._reconnects} reconnects left - "
+                f"websocket reconnecting. {self.MAX_RECONNECTS - self._reconnects} reconnects left - "  # noqa: E501
                 f"waiting {reconnect_wait}"
             )
             await asyncio.sleep(reconnect_wait)
             await self.connect()
             await self.send()
         else:
-            self._log.error(f"Max reconnections {self.MAX_RECONNECTS} reached:")
+            self._log.error(
+                f"Max reconnections {self.MAX_RECONNECTS} reached:"
+            )  # noqa: E501
             # Signal the error
-            await self._queue.put({"e": "error", "m": "Max reconnect retries reached"})
+            await self._queue.put(
+                {"e": "error", "m": "Max reconnect retries reached"}
+            )  # noqa: E501
             raise WebSocketUnableToConnect
 
     async def _wait_for_reconnect(self):
@@ -227,27 +233,29 @@ class EchoWebSocket(metaclass=ABCMeta):
     ) -> None:
         print("Entered Streamer")
 
-        redis = await connect_to_redis(RedisActionType.WRITE_ONLY)
-        record_count = 0
-        async with redis.pipeline() as pipe:
-            while True:
-                async for record in self.receive():
-                    if not record:
-                        continue
-                    print(record)
-                    if save_stream:
-                        await pipe.xadd(self.stream_name, record)
-                        record_count += 1
-                    if record_count >= max_record_count:
-                        await pipe.execute()
-                        print("Pushed records to Redis")
-                        record_count = 0
+        producer = AIOKafkaProducer(
+            bootstrap_servers="localhost:9092",
+            value_serializer=serializer,
+            compression_type="gzip",
+        )
+        await producer.start()
+        while True:
+            async for record in self.receive():
+                if not record:
+                    continue
+                print(record)
+                if save_stream:
+                    await producer.send_and_wait(self.stream_name, record)
+                    print("Pushed records to Kafka Cluster")
 
     async def recv(self):
         record = None
         while not record:
             try:
-                record = await asyncio.wait_for(self._queue.get(), timeout=self.TIMEOUT)
+                record = await asyncio.wait_for(
+                    self._queue.get(),
+                    timeout=self.TIMEOUT,
+                )
             except asyncio.TimeoutError:
                 self._log.debug(f"no message in {self.TIMEOUT} seconds")
         return record
