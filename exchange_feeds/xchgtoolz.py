@@ -1,7 +1,7 @@
 import os
 from enum import Enum
-from json import loads
-from typing import Optional, TypeVar
+from json import dumps, loads
+from typing import Dict, Optional, TypeVar, Any
 
 import aioredis
 
@@ -55,3 +55,12 @@ async def connect_to_redis(
     if await redis.ping():
         print("connected to Redis!")
     return redis
+
+
+def serializer(value: Dict[str, Any]):
+    return dumps(value).encode()
+
+
+def deserializer(serialized: str) -> Dict[str, Any]:
+    return loads(serialized)
+
